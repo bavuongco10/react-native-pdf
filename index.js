@@ -30,6 +30,13 @@ export default class Pdf extends Component {
 
     static propTypes = {
         ...ViewPropTypes,
+	accessibilityLabel: PropTypes.string,
+        importantForAccessibility: PropTypes.string,
+        renderToHardwareTextureAndroid: PropTypes.string,
+        testID: PropTypes.string,
+        onLayout: PropTypes.bool,
+        accessibilityLiveRegion: PropTypes.string,
+        accessibilityComponentType: PropTypes.string,    
         path: PropTypes.string,
         source: PropTypes.oneOfType([
             PropTypes.shape({
