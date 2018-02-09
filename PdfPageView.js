@@ -7,24 +7,37 @@
  */
 
 'use strict';
-import React, {Component} from 'react';
+import React, {PureComponent} from 'react';
 import PropTypes from 'prop-types';
 import {
     ViewPropTypes,
     requireNativeComponent,
 } from 'react-native';
 
-export default class PdfPageView extends Component {
+export default class PdfPageView extends PureComponent {
 
     constructor(props) {
         super(props);
         this.state = {}
     }
 
-    render() {
+    _getStyleFromProps = () => {
+        const { width, height } = this.props;
+        if(width || height) {
+            return {
+                width,
+                height
+            }
+        }
+        return {};
+    }
 
+    render() {
         return (
-            <PdfPageViewCustom {...this.props} />
+            <PdfPageViewCustom
+              {...this.props}
+              style={{...this._getStyleFromProps()}}
+            />
         );
 
     }
@@ -33,7 +46,9 @@ export default class PdfPageView extends Component {
 PdfPageView.propTypes = {
     ...ViewPropTypes,
     fileNo: PropTypes.number,
-    page: PropTypes.number
+    page: PropTypes.number,
+    width: PropTypes.number,
+    height: PropTypes.number
 };
 
 let PdfPageViewCustom = requireNativeComponent('RCTPdfPageView', PdfPageView, {nativeOnly: {}});

@@ -79,11 +79,18 @@ export default class PdfView extends Component {
 
 		PdfManager.loadFile(this.props.path, this.props.password)
 			.then((pdfInfo) => {
+
+				let data = [];
+				for (let i = 0; i < pdfInfo[1]; i++) {
+					data[i] = {key: i};
+				}
+
 				this.setState({
 					pdfLoaded: true,
 					fileNo: pdfInfo[0],
 					numberOfPages: pdfInfo[1],
-					pageAspectRate: pdfInfo[3] === 0 ? 1 : pdfInfo[2] / pdfInfo[3]
+					pageAspectRate: pdfInfo[3] === 0 ? 1 : pdfInfo[2] / pdfInfo[3],
+					data
 				});
 				if (this.props.onLoadComplete) this.props.onLoadComplete(pdfInfo[1], this.props.path);
 			})
@@ -190,9 +197,12 @@ export default class PdfView extends Component {
 		newScale = newScale < 1 ? 1 : newScale;
 
 		if (this.flatList && this.state.contentOffset) {
-			this.flatList.scrollToOffset({
+			this.flatList.scrollTo({
 				animated: false,
-				offset: (this.props.horizontal ? this.state.contentOffset.x : this.state.contentOffset.y) * scale
+				...( this.props.horizontal
+						? { x: this.state.contentOffset.x * scale }
+						: { y: this.state.contentOffset.y * scale }
+				)
 			});
 		}
 
@@ -208,18 +218,22 @@ export default class PdfView extends Component {
 
 	};
 
+	_onSingleTapItem = index => () => this._onItemSingleTap(index);
+	_onDoubleTapItem = index => () => this._onItemDoubleTap(index);
+
 	_renderItem = (item, sectionData, index) => {
 		return (
 			<DoubleTapView style={{flexDirection: this.props.horizontal ? 'row' : 'column'}}
-										 onSingleTap={()=>this._onItemSingleTap(index)}
-										 onDoubleTap={()=>this._onItemDoubleTap(index)}
+										 onSingleTap={this._onSingleTapItem(index)}
+										 onDoubleTap={this._onDoubleTapItem(index)}
 										 key={index}
 			>
 				<PdfPageView
 					key={item.id}
 					fileNo={this.state.fileNo}
 					page={item.key + 1}
-					style={{width: this._getPageWidth(), height: this._getPageHeight()}}
+					width={this._getPageWidth()}
+					height={this._getPageHeight()}
 				/>
 				{(index !== this.state.numberOfPages - 1) && this._renderSeparator()}
 			</DoubleTapView>
@@ -241,52 +255,51 @@ export default class PdfView extends Component {
 			this.props.onPageChanged(page, numberOfPages);
 			this.setState({currentPage:page});
 		}
-	}
+	};
 
 
 	_renderList = () => {
 
-		let data = [];
-		for (let i = 0; i < this.state.numberOfPages; i++) {
-			data[i] = {key: i};
-		}
-
-		const dataSource = this.ds.cloneWithRows(data);
+		const dataSource = this.ds.cloneWithRows(this.state.data);
 
 		return (
 			<ListView
-				ref={(ref) => {
-					this.flatList = ref;
-				}}
+				ref={this._getRef}
 				style={this.props.style}
 				contentContainerStyle={this.props.horizontal ? {height: this.state.contentContainerSize.height * this.state.scale} : {width: this.state.contentContainerSize.width * this.state.scale}}
 				horizontal={this.props.horizontal}
 				dataSource={dataSource}
 				renderRow={this._renderItem}
-				removeClippedSubviews={true}
-				onScroll={(e) => {
-					this.state.scrollEnabled && this.setState({contentOffset: e.nativeEvent.contentOffset});
-				}}
+				removeClippedSubviews
+				onScroll={this._onScroll}
 				scrollEnabled={this.state.scrollEnabled}
+				initialListSize={1}
 			/>
 		);
 
 	};
 
+	_getRef = (ref) => this.flatList = ref;
+
+	_onScroll = (e) => {
+		this.state.scrollEnabled && this.setState({contentOffset: e.nativeEvent.contentOffset});
+	};
+
+	_onLayout = (event) => {
+		this.setState({
+			contentContainerSize: {
+				width: event.nativeEvent.layout.width,
+				height: event.nativeEvent.layout.height
+			}
+		});
+	};
 
 	render() {
 
 		return (
 			<PinchZoomView
 				style={{flex: 1}}
-				onLayout={(event) => {
-					this.setState({
-						contentContainerSize: {
-							width: event.nativeEvent.layout.width,
-							height: event.nativeEvent.layout.height
-						}
-					});
-				}}
+				onLayout={this._onLayout}
 				onScaleChanged={this._onScaleChanged}
 			>
 				{this.state.pdfLoaded ? this._renderList() : (null)}
